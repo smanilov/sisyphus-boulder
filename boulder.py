@@ -77,6 +77,7 @@ print "Scopes:", scopes
 
 # Find all for loops
 print "Finding all for loops..."
+for_loops = []
 token = "for"
 index = text.find(token)
 while not index is -1:
@@ -95,18 +96,29 @@ while not index is -1:
                         # TODO: C++11 curly braces initialization
                         print "could not find for loop body"
                 else:
-                        print "for loop at index", index, \
-                              "has scope", scopes[found]
+                        for_loops.append((index, found))
 
         index = text.find(token, index + 1)
 
-
+print "For loops:", for_loops
 
 # Search for tokens
 print "Searching for tokens..."
+unroll_loop = [False] * len(for_loops)
 for token in tokens:
         print "Searching for token", token
         index = text.find(token)
         while not index is -1:
                 print "Search for loop containing", index
+                found = -1
+                for i in range(len(for_loops)):
+                        s = scopes[for_loops[i][1]]
+                        if s[0] < index and s[1] > index:
+                                found = i
+                                break
+                if not found is -1:
+                        print "Loop", found, "contains", index
+                        unroll_loop[found] = True
                 index = text.find(token, index + 1)
+
+print "Unroll loops:", unroll_loop
