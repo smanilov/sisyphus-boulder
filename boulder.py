@@ -29,6 +29,7 @@ tokens = tokens_str.split('\n')
 tokens = [t for t in tokens if t]
 
 # Find all scopes
+print "Finding all scopes..."
 open_scope = "{"
 close_scope = "}"
 open_comment = ["/*", "//"]
@@ -74,6 +75,35 @@ for i in range(len(text)):
 
 print "Scopes:", scopes
 
+# Find all for loops
+print "Finding all for loops..."
+token = "for"
+index = text.find(token)
+while not index is -1:
+        found = -1
+        for i in range(len(scopes)):
+                if scopes[i][1] > index:
+                        found = i
+                        break
+
+        if not found is -1:
+                semicols = 0
+                for i in range(index, scopes[found][0]):
+                        if text[i] is ";":
+                                semicols += 1
+                if not semicols is 2:
+                        # TODO: C++11 curly braces initialization
+                        print "could not find for loop body"
+                else:
+                        print "for loop at index", index, \
+                              "has scope", scopes[found]
+
+        index = text.find(token, index + 1)
+
+
+
+# Search for tokens
+print "Searching for tokens..."
 for token in tokens:
         print "Searching for token", token
         index = text.find(token)
