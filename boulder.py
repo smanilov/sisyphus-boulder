@@ -28,6 +28,52 @@ tokens_str = token_file.read()
 tokens = tokens_str.split('\n')
 tokens = [t for t in tokens if t]
 
+# Find all scopes
+open_scope = "{"
+close_scope = "}"
+open_comment = ["/*", "//"]
+close_comment = ["*/", "\n"]
+open_string = "\""
+close_string = "\""
+not_close_string = "\\\""
+
+in_comment = -1
+in_string = False
+
+scopes = []
+stack = []
+for i in range(len(text)):
+        # handle strings and comments
+        if not in_comment is -1:
+                if text.startswith(close_comment[in_comment], i):
+                        in_comment = -1
+                continue  # don't check anything else
+        if in_string:
+                if text.startswith(close_string, i) and \
+                   not text.startswith(not_close_string, i-1):
+                        in_string = False
+                continue  # don't check anything else
+        # not in_string and not in_comment
+        for j in range(len(open_comment)):
+                if text.startswith(open_comment[j], i):
+                        in_comment = j
+
+        if text.startswith(open_string, i):
+                in_string = True
+
+        # actual scope building logic
+        if text.startswith(open_scope, i):
+                stack.append(i)
+        if text.startswith(close_scope, i):
+                try:
+                        k = stack.pop()
+                        scopes.append((k, i))
+                except IndexError:
+                        print "Unexpected closing bracket at index", i
+                        raise
+
+print "Scopes:", scopes
+
 for token in tokens:
         print "Searching for token", token
         index = text.find(token)
