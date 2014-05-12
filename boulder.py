@@ -28,5 +28,9 @@ tokens_str = token_file.read()
 tokens = tokens_str.split('\n')
 tokens = [t for t in tokens if t]
 
-print tokens
-
+for token in tokens:
+        print "Searching for token", token
+        index = text.find(token)
+        while not index is -1:
+                print "Search for loop containing", index
+                index = text.find(token, index + 1)
