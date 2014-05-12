@@ -2,12 +2,31 @@
 
 import sys
 
-if len(sys.argv) < 2:
-        sys.exit("Usage: %s input_file" % sys.argv[0])
+# Print usage
+if len(sys.argv) < 3:
+        format = """
+Usage: %s source_file token_file
+        source_file
+                a file containing c/c++/java source code
+        token_file
+                a file containing one token per line; These tokens
+                are used to identify which loops to unroll - the ones
+                containing any of the tokens in their bodies. Empty lines are
+                ignored.
+"""
+        sys.exit(format % sys.argv[0])
 
-input_file_name = sys.argv[1]
-input_file = open(input_file_name)
-text = input_file.read()
+# Read source file
+source_file_name = sys.argv[1]
+source_file = open(source_file_name)
+text = source_file.read()
 
-print text
+# Read token file; filter empty lines
+token_file_name = sys.argv[2]
+token_file = open(token_file_name)
+tokens_str = token_file.read()
+tokens = tokens_str.split('\n')
+tokens = [t for t in tokens if t]
+
+print tokens
 
