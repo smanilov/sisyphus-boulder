@@ -124,13 +124,11 @@ while not index is -1:
 print "For loops:", for_loops
 
 # Search for tokens
-print "Searching for tokens..."
+print "Detecting loops for unrolling..."
 unroll_loop = [False] * len(for_loops)
 for token in tokens:
-        print "Searching for token", token
         index = text.find(token)
         while not index is -1:
-                print "Search for loop containing", index
                 found = -1
                 for i in range(len(for_loops)):
                         s = scopes[for_loops[i][1]]
@@ -138,11 +136,23 @@ for token in tokens:
                                 found = i
                                 break
 
+                # find nested loops that contain the token
+                i = found
+                while i + 1 < len(for_loops):
+                        i += 1
+                        f = scopes[for_loops[found][1]]
+                        s = scopes[for_loops[i][1]]
+                        if s[0] < index and s[1] > index:
+                                # s contains the token
+                                found = i
+
+                        if s[0] < f[0] or s[1] > f[1]:
+                                break
+
                 if not found is -1:
                         found2 = -1
                         for i in range(found, len(for_loops)):
                                 s = scopes[for_loops[i][1]]
-                                print "index:", index, "s:", s
                                 # if index is out of the scope s
                                 if s[0] > index or s[1] < index:
                                         found2 = i - 1
