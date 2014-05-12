@@ -83,20 +83,41 @@ index = text.find(token)
 while not index is -1:
         found = -1
         for i in range(len(scopes)):
+                # if the closing brace is after the for keyword then either
+                # that scope is the for body, or it is contained by it
                 if scopes[i][1] > index:
                         found = i
                         break
 
-        if not found is -1:
-                semicols = 0
-                for i in range(index, scopes[found][0]):
-                        if text[i] is ";":
-                                semicols += 1
-                if not semicols is 2:
-                        # TODO: C++11 curly braces initialization
-                        print "could not find for loop body"
-                else:
-                        for_loops.append((index, found))
+        if found is -1:
+                print "could not find for loop body"
+                continue
+
+        i = found
+        while i + 1 < len(scopes):
+                i += 1
+                if scopes[i][0] < index:
+                        # scope containing for keyword
+                        break
+                if scopes[i][0] < scopes[found][0]:
+                        # scope containing scope
+                        found = i
+                        continue
+                if scopes[i][0] > scopes[found][1]:
+                        # next scope
+                        continue
+
+        # see if the scope belongs to the for loop
+        semicols = 0
+        for i in range(index, scopes[found][0]):
+                if text[i] is ";":
+                        semicols += 1
+        if not semicols is 2:
+                # TODO: C++11 curly braces initialization
+                print "could not find for loop body"
+                print "index:", index, "found:", found, "semicols:", semicols
+        else:
+                for_loops.append((index, found))
 
         index = text.find(token, index + 1)
 
@@ -116,9 +137,27 @@ for token in tokens:
                         if s[0] < index and s[1] > index:
                                 found = i
                                 break
+
                 if not found is -1:
+                        found2 = -1
+                        for i in range(found, len(for_loops)):
+                                s = scopes[for_loops[i][1]]
+                                print "index:", index, "s:", s
+                                # if index is out of the scope s
+                                if s[0] > index or s[1] < index:
+                                        found2 = i - 1
+                                        break
+
+                        # if index was in all of the nested scopes then
+                        # make the inner-most for loop its owner
+                        if found2 is -1:
+                                found2 = len(for_loops) - 1
+
+                        found = found2
+
                         print "Loop", found, "contains", index
                         unroll_loop[found] = True
+
                 index = text.find(token, index + 1)
 
 print "Unroll loops:", unroll_loop
