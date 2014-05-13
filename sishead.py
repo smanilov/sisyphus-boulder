@@ -2,9 +2,9 @@ import sys
 
 def print_usage():
         # Print usage
-        if len(sys.argv) < 3:
+        if len(sys.argv) < 5:
                 format = """
-Usage: %s source_file token_file
+Usage: %s source_file token_file unroll_factor output_file
         source_file
                 a file containing c/c++/java source code
         token_file
@@ -12,6 +12,10 @@ Usage: %s source_file token_file
                 are used to identify which loops to unroll - the ones
                 containing any of the tokens in their bodies. Empty lines are
                 ignored.
+        unroll_factor
+                the times each loop body should be copied in the output file
+        output_file
+                name of the output file
         """
                 sys.exit(format % sys.argv[0])
 
@@ -30,6 +34,17 @@ def read_token_file():
         tokens_str = token_file.read()
         tokens = tokens_str.split('\n')
         return [t for t in tokens if t]
+
+
+def read_unroll_factor():
+        # Read source file
+        unroll_factor = sys.argv[3]
+        return int(unroll_factor)
+
+
+def read_output_file_name():
+        # Read source file
+        return sys.argv[4]
 
 
 def find_all_scopes(text):
@@ -178,3 +193,93 @@ def detect_loops_for_unrolling(for_loops, tokens, text, scopes):
 
                         index = text.find(token, index + 1)
         return unroll_loop
+
+
+def get_loop_iterator(mod):
+        """Empty result indicates error."""
+        i = mod.find("++")
+        if not i is -1:
+                if i is 0:
+                        return mod[i + 2 : ]
+                else:
+                        return mod[ : i]
+
+        i = mod.find("+=")
+        if not i is -1:
+                return mod[ : i]
+
+        return ""
+
+
+def get_loop_increment(mod):
+        """-1 as a result indicates error."""
+        if not mod.find("++") is -1:
+                return 1
+
+        i = mod.find("+=")
+        if not i is -1:
+                return int(mod[i + 2 : ])
+
+        return -1
+
+
+def gen_unroll_for_decl(old_for_declaration, itr, inc, unroll_factor):
+        new_inc = inc* unroll_factor
+        
+        l = old_for_declaration.rfind(";")
+        h = old_for_declaration.rfind(")")
+
+        new_decl = old_for_declaration[ : l + 1]
+        new_decl += " " + itr + " += " + str(new_inc)
+        new_decl += old_for_declaration[h : ]
+        return new_decl
+
+
+import re
+
+def gen_new_text(text, for_loops, scopes, unroll_loop, unroll_factor):
+        print "Generating output..."
+
+        ident = "        "
+        new_line = "\n"
+
+        new_text = ""
+        offset = 0
+        for i in range(len(unroll_loop)):
+                if unroll_loop[i]:
+                        new_text += text[offset : for_loops[i][0]]
+
+                        # get loop body
+                        s = scopes[for_loops[i][1]]
+                        loop_body = text[s[0] + 2 + len(ident): s[1]]
+
+                        # isolate loop modifier
+                        l = text.rfind(";", for_loops[i][0], s[0])
+                        h = text.rfind(")", for_loops[i][0], s[0])
+                        mod = text[l + 1 : h]
+
+                        # drop empty spaces
+                        mod = re.sub(' ', '', mod)
+
+                        itr = get_loop_iterator(mod)
+                        inc = get_loop_increment(mod)
+
+                        decl = text[for_loops[i][0] : scopes[for_loops[i][1]][0] + 1]
+                        new_for = gen_unroll_for_decl(decl, itr, inc, unroll_factor)
+
+                        new_text += new_for + new_line + ident
+                        for j in range(unroll_factor):
+                                new_text += re.sub(itr, itr + " + " + str(j), loop_body)
+
+                        offset = scopes[for_loops[i][1]][1]
+
+        new_text += text[offset : ]
+
+        return new_text
+
+
+def write_output_file(new_text, output_file_name):
+        print "Writing to file..."
+        f = open(output_file_name, "w")
+        f.write(new_text)
+        f.close()
