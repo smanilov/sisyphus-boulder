@@ -223,13 +223,15 @@ def get_loop_increment(mod):
         return -1
 
 
-def gen_unroll_for_decl(old_for_declaration, itr, inc, unroll_factor):
+def gen_unroll_for_decl(old_for_declaration, itr, cnd, inc, unroll_factor):
         new_inc = inc* unroll_factor
         
         l = old_for_declaration.rfind(";")
+        l = old_for_declaration.rfind(";", 0, l)  # second-last ;
         h = old_for_declaration.rfind(")")
 
         new_decl = old_for_declaration[ : l + 1]
+        new_decl += cnd + " - " + str(new_inc - 1) + ";"
         new_decl += " " + itr + " += " + str(new_inc)
         new_decl += old_for_declaration[h : ]
         return new_decl
@@ -257,15 +259,19 @@ def gen_new_text(text, for_loops, scopes, unroll_loop, unroll_factor):
                         l = text.rfind(";", for_loops[i][0], s[0])
                         h = text.rfind(")", for_loops[i][0], s[0])
                         mod = text[l + 1 : h]
-
                         # drop empty spaces
                         mod = re.sub(' ', '', mod)
+
+                        #isolate loop condition
+                        h = text.rfind(";", for_loops[i][0], s[0])
+                        l = text.rfind(";", for_loops[i][0], h)
+                        cnd = text[l + 1 : h]
 
                         itr = get_loop_iterator(mod)
                         inc = get_loop_increment(mod)
 
                         decl = text[for_loops[i][0] : scopes[for_loops[i][1]][0] + 1]
-                        new_for = gen_unroll_for_decl(decl, itr, inc, unroll_factor)
+                        new_for = gen_unroll_for_decl(decl, itr, cnd, inc, unroll_factor)
 
                         new_text += new_for + new_line + ident
                         for j in range(unroll_factor):
